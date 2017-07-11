@@ -61,17 +61,20 @@ class BnsTransformer(BaseEstimator, TransformerMixin):
             # convert counts or binary occurrences to floats
             X = sp.csr_matrix(X, dtype=np.float64, copy=True)
             
-        # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
-        X = np.matrix(X.todense(), dtype=np.float64)
-        # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
+        # # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
+        # X = np.matrix(X.todense(), dtype=np.float64)
+        # # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
 
-        classes = set(y)
+        classes = np.array(list(set(y)))
         self.bns_scores = np.zeros((len(classes),X.shape[1]))
+        print("Fitting inputs")
         for index, target_class in enumerate(classes):
+            print("%s / %s" % (index, len(classes)))
             class_mask = np.array(y == target_class,dtype=int)
             self.bns_scores[index, :] = self._generate_bns_score(X,class_mask)
 
-        self.bns_scores = np.mean(self.bns_scores, axis=0)
+        print("Fitting done")
+        self.bns_scores = np.max(self.bns_scores, axis=0)
 
         return self
 
@@ -83,7 +86,7 @@ class BnsTransformer(BaseEstimator, TransformerMixin):
         bns_scores = np.ravel(np.zeros((1,X.shape[1])))
 
         for index, word in enumerate(X.T[:]):
-            word_vector = np.ravel(word)
+            word_vector = np.ravel(word.toarray())
             bns_scores[index] = self._compute_partial_bns(word_vector, positive_doc, negative_doc, class_mask, verbose)
 
 
@@ -91,7 +94,6 @@ class BnsTransformer(BaseEstimator, TransformerMixin):
 
     def _compute_partial_bns(self, word_vector, pos, neg, class_mask, verbose=False):
         """ compute the BNS score of the word of the vocabulary at the index wordIndex """
-
         tp = np.sum(word_vector * class_mask)
         tn = np.sum(word_vector * np.abs(class_mask-1))
 
@@ -123,13 +125,15 @@ class BnsTransformer(BaseEstimator, TransformerMixin):
             # convert counts or binary occurrences to floats
             X = sp.csr_matrix(X, dtype=np.float64, copy=copy)
         
-        # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
-        X = np.matrix(X.todense(), dtype=np.float64)
-        # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
+        # # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
+        # X = np.matrix(X.todense(), dtype=np.float64)
+        # # THIS IS NOT GOOD, I SHOULD WORK WITH SPARSE MATRIX
 
-        for index, word in enumerate(X.T[:]):
-            word *= self.bns_scores[index]
-        
+        print("Transforming inputs")
+        for it, index in enumerate(list(set(X.indices))):
+            X.T[index] *= self.bns_scores[index]
+            print("%s / %s" % (it, X.T[:].shape[0]))
+
         return sp.coo_matrix(X, dtype=np.float64)
         
     def is_word_feature(self, word, verbose=False):
@@ -151,4 +155,3 @@ class BnsTransformer(BaseEstimator, TransformerMixin):
         if value < lower: value = lower
         elif value > upper: value = upper
         return value
-    
