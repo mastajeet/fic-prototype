@@ -6,7 +6,6 @@ Created on Feb 2, 2013
 
 import scipy.sparse as sp
 import numpy as np
-from babel.plural import negate
 from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from ficlearn.util.statslib import ltqnorm
